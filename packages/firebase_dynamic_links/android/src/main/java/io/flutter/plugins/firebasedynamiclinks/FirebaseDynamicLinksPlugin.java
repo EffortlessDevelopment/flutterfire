@@ -170,8 +170,7 @@ public class FirebaseDynamicLinksPlugin
   private Map<String, Object> getMapFromPendingDynamicLinkData(
       PendingDynamicLinkData pendingDynamicLinkData) {
     Map<String, Object> dynamicLink = new HashMap<>();
-    Uri link = pendingDynamicLinkData.getLink();
-    dynamicLink.put("link", link != null ? link.toString() : null);
+    dynamicLink.put("link", pendingDynamicLinkData.getLink().toString());
 
     Map<String, Object> androidData = new HashMap<>();
     androidData.put("clickTimestamp", pendingDynamicLinkData.getClickTimestamp());

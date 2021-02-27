@@ -1,1 +1,1 @@
-../../ios/Classes/FLTFirebaseAuthPlugin.m
+../../darwin/Classes/FLTFirebaseAuthPlugin.m

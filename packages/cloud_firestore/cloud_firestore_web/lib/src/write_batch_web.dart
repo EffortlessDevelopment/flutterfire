@@ -3,49 +3,49 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
+import 'package:firebase/firestore.dart' as web;
 
-import 'interop/firestore.dart' as firestore_interop;
-import 'utils/web_utils.dart';
-import 'utils/exception.dart';
-import 'utils/codec_utility.dart';
+import 'package:cloud_firestore_web/src/utils/codec_utility.dart';
+import 'package:cloud_firestore_web/src/document_reference_web.dart';
 
-/// A web specific implementation of [WriteBatch].
+/// A web specific for [WriteBatch]
 class WriteBatchWeb extends WriteBatchPlatform {
-  final firestore_interop.Firestore _webFirestoreDelegate;
-  firestore_interop.WriteBatch _webWriteBatchDelegate;
+  final web.WriteBatch _delegate;
 
   /// Constructor.
-  WriteBatchWeb(this._webFirestoreDelegate)
-      : _webWriteBatchDelegate = _webFirestoreDelegate.batch()!,
-        super();
+  WriteBatchWeb(this._delegate);
 
   @override
   Future<void> commit() async {
-    try {
-      await _webWriteBatchDelegate.commit();
-    } catch (e) {
-      throw getFirebaseException(e);
-    }
+    await _delegate.commit();
   }
 
   @override
-  void delete(String documentPath) {
-    _webWriteBatchDelegate.delete(_webFirestoreDelegate.doc(documentPath));
+  void delete(DocumentReferencePlatform document) {
+    assert(document is DocumentReferenceWeb);
+    _delegate.delete((document as DocumentReferenceWeb).delegate);
   }
 
   @override
-  void set(String documentPath, Map<String, dynamic> data,
-      [SetOptions? options]) {
-    _webWriteBatchDelegate.set(_webFirestoreDelegate.doc(documentPath),
-        CodecUtility.encodeMapData(data)!, convertSetOptions(options));
+  void setData(
+    DocumentReferencePlatform document,
+    Map<String, dynamic> data, {
+    bool merge = false,
+  }) {
+    assert(document is DocumentReferenceWeb);
+    _delegate.set(
+        (document as DocumentReferenceWeb).delegate,
+        CodecUtility.encodeMapData(data),
+        merge ? web.SetOptions(merge: merge) : null);
   }
 
   @override
-  void update(
-    String documentPath,
+  void updateData(
+    DocumentReferencePlatform document,
     Map<String, dynamic> data,
   ) {
-    _webWriteBatchDelegate.update(_webFirestoreDelegate.doc(documentPath),
-        CodecUtility.encodeMapData(data)!);
+    assert(document is DocumentReferenceWeb);
+    _delegate.update((document as DocumentReferenceWeb).delegate,
+        data: CodecUtility.encodeMapData(data));
   }
 }

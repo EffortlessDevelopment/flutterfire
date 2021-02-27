@@ -6,13 +6,10 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:collection/collection.dart';
-import 'package:flutter/material.dart';
 
 /// Represents binary data stored in [Uint8List].
-
-@immutable
 class Blob {
-  /// Creates a blob.
+  /// Create a blob.
   const Blob(this.bytes);
 
   /// The bytes that are contained in this blob.

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 part of firebase_ml_vision;
 
 enum _ImageType { file, bytes }
@@ -15,15 +13,6 @@ enum ImageRotation { rotation0, rotation90, rotation180, rotation270 }
 
 /// Indicates whether a model is ran on device or in the cloud.
 enum ModelType { onDevice, cloud }
-
-/// Detected language from text recognition in regular and document images.
-class RecognizedLanguage {
-  RecognizedLanguage._(dynamic data) : languageCode = data['languageCode'];
-
-  /// The BCP-47 language code, such as, en-US or sr-Latn. For more information,
-  /// see http://www.unicode.org/reports/tr35/#Unicode_locale_identifier.
-  final String languageCode;
-}
 
 /// The Firebase machine learning vision API.
 ///
@@ -95,20 +84,9 @@ class FirebaseVision {
   }
 
   /// Creates a cloud instance of [TextRecognizer].
-  TextRecognizer cloudTextRecognizer(
-      [CloudTextRecognizerOptions cloudOptions]) {
+  TextRecognizer cloudTextRecognizer() {
     return TextRecognizer._(
-      cloudOptions: cloudOptions ?? const CloudTextRecognizerOptions(),
       modelType: ModelType.cloud,
-      handle: nextHandle++,
-    );
-  }
-
-  /// Creates a cloud instance of [DocumentTextRecognizer].
-  DocumentTextRecognizer cloudDocumentTextRecognizer(
-      [CloudDocumentRecognizerOptions cloudOptions]) {
-    return DocumentTextRecognizer._(
-      cloudOptions: cloudOptions ?? const CloudDocumentRecognizerOptions(),
       handle: nextHandle++,
     );
   }

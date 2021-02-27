@@ -1,15 +1,15 @@
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
+import 'dart:async';
 
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
-import 'package:cloud_firestore_platform_interface/src/internal/pointer.dart';
 
-import 'method_channel_document_reference.dart';
 import 'method_channel_query.dart';
+import 'method_channel_document_reference.dart';
 import 'utils/auto_id_generator.dart';
 
-/// A `CollectionReference` object can be used for adding documents, getting
+/// A CollectionReference object can be used for adding documents, getting
 /// document references, and querying for documents (using the methods
 /// inherited from [QueryPlatform]).
 ///
@@ -19,47 +19,42 @@ import 'utils/auto_id_generator.dart';
 /// [CollectionReferencePlatform] and this class started throwing compilation
 /// errors, now you know why.
 class MethodChannelCollectionReference extends MethodChannelQuery
-    implements
-// ignore: avoid_implementing_value_types
-        CollectionReferencePlatform {
-  late Pointer _pointer;
-
-  /// Create a [MethodChannelCollectionReference] instance.
+    implements CollectionReferencePlatform {
+  /// Create a [MethodChannelCollectionReference] from [pathComponents]
   MethodChannelCollectionReference(
-      FirebaseFirestorePlatform firestore, String path)
-      : super(firestore, path) {
-    _pointer = Pointer(path);
-  }
+      FirestorePlatform firestore, List<String> pathComponents)
+      : super(firestore: firestore, pathComponents: pathComponents);
 
-  /// Returns the identifier of this referenced collection.
-  @override
-  String get id => _pointer.id;
-
-  /// A string containing the slash-separated path to this instance
-  /// (relative to the root of the database).
-  @override
-  DocumentReferencePlatform? get parent {
-    String? parentPath = _pointer.parentPath();
-    return parentPath == null
-        ? null
-        : MethodChannelDocumentReference(firestore, parentPath);
-  }
-
-  /// Returns the path of this referenced collection.
-  @override
-  String get path => _pointer.path;
+  /// ID of the referenced collection.
+  String get id => pathComponents.isEmpty ? null : pathComponents.last;
 
   @override
-  DocumentReferencePlatform doc([String? path]) {
-    String documentPath;
-
-    if (path != null) {
-      documentPath = _pointer.documentPath(path);
-    } else {
-      final String autoId = AutoIdGenerator.autoId();
-      documentPath = _pointer.documentPath(autoId);
+  DocumentReferencePlatform parent() {
+    if (pathComponents.length < 2) {
+      return null;
     }
+    return MethodChannelDocumentReference(
+      firestore,
+      (List<String>.from(pathComponents)..removeLast()),
+    );
+  }
 
-    return MethodChannelDocumentReference(firestore, documentPath);
+  @override
+  DocumentReferencePlatform document([String path]) {
+    List<String> childPath;
+    if (path == null) {
+      final String key = AutoIdGenerator.autoId();
+      childPath = List<String>.from(pathComponents)..add(key);
+    } else {
+      childPath = List<String>.from(pathComponents)..addAll(path.split(('/')));
+    }
+    return MethodChannelDocumentReference(firestore, childPath);
+  }
+
+  @override
+  Future<DocumentReferencePlatform> add(Map<String, dynamic> data) async {
+    final DocumentReferencePlatform newDocument = document();
+    await newDocument.setData(data);
+    return newDocument;
   }
 }

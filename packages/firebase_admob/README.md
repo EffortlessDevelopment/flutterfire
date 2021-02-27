@@ -384,6 +384,7 @@ This plugin currently has some limitations:
 
 - Banner ads cannot be animated into view.
 - It's not possible to specify a banner ad's size.
+- There's no support for native ads.
 - The existing tests are fairly rudimentary.
 - There is no API doc.
 - The example should demonstrate how to show gate a route push with an
@@ -391,10 +392,10 @@ This plugin currently has some limitations:
 
 ## Issues and feedback
 
-Please file FlutterFire specific issues, bugs, or feature requests in our [issue tracker](https://github.com/FirebaseExtended/flutterfire/issues/new).
+Please file Flutterfire specific issues, bugs, or feature requests in our [issue tracker](https://github.com/FirebaseExtended/flutterfire/issues/new).
 
 Plugin issues that are not specific to Flutterfire can be filed in the [Flutter issue tracker](https://github.com/flutter/flutter/issues/new).
 
 To contribute a change to this plugin,
-please review our [contribution guide](https://github.com/FirebaseExtended/flutterfire/blob/master/CONTRIBUTING.md)
-and open a [pull request](https://github.com/FirebaseExtended/flutterfire/pulls).
+please review our [contribution guide](https://github.com/FirebaseExtended/flutterfire/blob/master/CONTRIBUTING.md),
+and send a [pull request](https://github.com/FirebaseExtended/flutterfire/pulls).

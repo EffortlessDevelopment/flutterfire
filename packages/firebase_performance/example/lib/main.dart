@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:http/http.dart';
@@ -129,11 +127,11 @@ class _MyAppState extends State<MyApp> {
           child: Column(
             children: <Widget>[
               Text(_performanceCollectionMessage),
-              ElevatedButton(
+              RaisedButton(
                 onPressed: _togglePerformanceCollection,
                 child: const Text('Toggle Data Collection'),
               ),
-              ElevatedButton(
+              RaisedButton(
                 onPressed: _testTrace,
                 child: const Text('Run Trace'),
               ),
@@ -141,7 +139,7 @@ class _MyAppState extends State<MyApp> {
                 _traceHasRan ? 'Trace Ran!' : '',
                 style: textStyle,
               ),
-              ElevatedButton(
+              RaisedButton(
                 onPressed: _testHttpMetric,
                 child: const Text('Run HttpMetric'),
               ),

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #import "FLTFirebaseDynamicLinksPlugin.h"
+#import "UserAgent.h"
 
 #import "Firebase/Firebase.h"
 
@@ -118,35 +119,6 @@ static NSMutableDictionary *getDictionaryFromFlutterError(FlutterError *error) {
   return getDictionaryFromDynamicLink(_initialLink);
 }
 
-- (void)onDeepLinkResult:(FIRDynamicLink *_Nullable)dynamicLink error:(NSError *_Nullable)error {
-  if (_initiated) {
-    if (error) {
-      FlutterError *flutterError = getFlutterError(error);
-      [_channel invokeMethod:@"onLinkError" arguments:getDictionaryFromFlutterError(flutterError)];
-    } else {
-      NSMutableDictionary *dictionary = getDictionaryFromDynamicLink(dynamicLink);
-      [_channel invokeMethod:@"onLinkSuccess" arguments:dictionary];
-    }
-  } else {
-    if (error) {
-      _flutterError = getFlutterError(error);
-    } else if (dynamicLink.url != nil || _initialLink == nil) {
-      // We'd like to overwrite initial link only if it's
-      // the first time or if we overwrite it with url that is not nil
-      _initialLink = dynamicLink;
-    }
-  }
-}
-
-- (BOOL)checkForDynamicLink:(NSURL *)url {
-  FIRDynamicLink *dynamicLink = [[FIRDynamicLinks dynamicLinks] dynamicLinkFromCustomSchemeURL:url];
-  if (dynamicLink) {
-    [self onDeepLinkResult:dynamicLink error:nil];
-    return YES;
-  }
-  return NO;
-}
-
 - (BOOL)application:(UIApplication *)application
             openURL:(NSURL *)url
             options:(NSDictionary<UIApplicationOpenURLOptionsKey, id> *)options {
@@ -160,15 +132,50 @@ static NSMutableDictionary *getDictionaryFromFlutterError(FlutterError *error) {
   return [self checkForDynamicLink:url];
 }
 
-- (BOOL)application:(UIApplication *)application
-    continueUserActivity:(NSUserActivity *)userActivity
-      restorationHandler:(void (^)(NSArray *))restorationHandler {
+- (BOOL)checkForDynamicLink:(NSURL *)url {
+  FIRDynamicLink *dynamicLink = [[FIRDynamicLinks dynamicLinks] dynamicLinkFromCustomSchemeURL:url];
+  if (dynamicLink) {
+    if (dynamicLink.url) _initialLink = dynamicLink;
+    return YES;
+  }
+  return NO;
+}
+
+- (BOOL)onLink:(NSUserActivity *)userActivity {
   BOOL handled = [[FIRDynamicLinks dynamicLinks]
       handleUniversalLink:userActivity.webpageURL
                completion:^(FIRDynamicLink *_Nullable dynamicLink, NSError *_Nullable error) {
-                 [self onDeepLinkResult:dynamicLink error:error];
+                 if (error) {
+                   FlutterError *flutterError = getFlutterError(error);
+                   [self.channel invokeMethod:@"onLinkError"
+                                    arguments:getDictionaryFromFlutterError(flutterError)];
+                 } else {
+                   NSMutableDictionary *dictionary = getDictionaryFromDynamicLink(dynamicLink);
+                   [self.channel invokeMethod:@"onLinkSuccess" arguments:dictionary];
+                 }
                }];
   return handled;
+}
+
+- (BOOL)onInitialLink:(NSUserActivity *)userActivity {
+  BOOL handled = [[FIRDynamicLinks dynamicLinks]
+      handleUniversalLink:userActivity.webpageURL
+               completion:^(FIRDynamicLink *_Nullable dynamicLink, NSError *_Nullable error) {
+                 if (error) {
+                   self.flutterError = getFlutterError(error);
+                 }
+                 self.initialLink = dynamicLink;
+               }];
+  return handled;
+}
+
+- (BOOL)application:(UIApplication *)application
+    continueUserActivity:(NSUserActivity *)userActivity
+      restorationHandler:(void (^)(NSArray *))restorationHandler {
+  if (_initiated) {
+    return [self onLink:userActivity];
+  }
+  return [self onInitialLink:userActivity];
 }
 
 - (FIRDynamicLinkShortenerCompletion)createShortLinkCompletion:(FlutterResult)result {

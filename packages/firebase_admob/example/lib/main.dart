@@ -2,25 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 // ignore_for_file: public_member_api_docs
 
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_admob/firebase_admob.dart';
 
 // You can also test with your own ad unit IDs by registering your device as a
 // test device. Check the logs for your device's ID value.
 const String testDevice = 'YOUR_DEVICE_ID';
-
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(MyApp());
-}
 
 class MyApp extends StatefulWidget {
   @override
@@ -110,7 +101,7 @@ class _MyAppState extends State<MyApp> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                ElevatedButton(
+                RaisedButton(
                     child: const Text('SHOW BANNER'),
                     onPressed: () {
                       _bannerAd ??= createBannerAd();
@@ -118,7 +109,7 @@ class _MyAppState extends State<MyApp> {
                         ..load()
                         ..show();
                     }),
-                ElevatedButton(
+                RaisedButton(
                     child: const Text('SHOW BANNER WITH OFFSET'),
                     onPressed: () {
                       _bannerAd ??= createBannerAd();
@@ -126,26 +117,26 @@ class _MyAppState extends State<MyApp> {
                         ..load()
                         ..show(horizontalCenterOffset: -50, anchorOffset: 100);
                     }),
-                ElevatedButton(
+                RaisedButton(
                     child: const Text('REMOVE BANNER'),
                     onPressed: () {
                       _bannerAd?.dispose();
                       _bannerAd = null;
                     }),
-                ElevatedButton(
+                RaisedButton(
                   child: const Text('LOAD INTERSTITIAL'),
                   onPressed: () {
                     _interstitialAd?.dispose();
                     _interstitialAd = createInterstitialAd()..load();
                   },
                 ),
-                ElevatedButton(
+                RaisedButton(
                   child: const Text('SHOW INTERSTITIAL'),
                   onPressed: () {
                     _interstitialAd?.show();
                   },
                 ),
-                ElevatedButton(
+                RaisedButton(
                   child: const Text('SHOW NATIVE'),
                   onPressed: () {
                     _nativeAd ??= createNativeAd();
@@ -158,14 +149,14 @@ class _MyAppState extends State<MyApp> {
                       );
                   },
                 ),
-                ElevatedButton(
+                RaisedButton(
                   child: const Text('REMOVE NATIVE'),
                   onPressed: () {
                     _nativeAd?.dispose();
                     _nativeAd = null;
                   },
                 ),
-                ElevatedButton(
+                RaisedButton(
                   child: const Text('LOAD REWARDED VIDEO'),
                   onPressed: () {
                     RewardedVideoAd.instance.load(
@@ -173,7 +164,7 @@ class _MyAppState extends State<MyApp> {
                         targetingInfo: targetingInfo);
                   },
                 ),
-                ElevatedButton(
+                RaisedButton(
                   child: const Text('SHOW REWARDED VIDEO'),
                   onPressed: () {
                     RewardedVideoAd.instance.show();
@@ -192,4 +183,8 @@ class _MyAppState extends State<MyApp> {
       ),
     );
   }
+}
+
+void main() {
+  runApp(MyApp());
 }

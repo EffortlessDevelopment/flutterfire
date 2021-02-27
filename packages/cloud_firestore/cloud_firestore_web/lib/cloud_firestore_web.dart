@@ -3,165 +3,94 @@
 // BSD-style license that can be found in the LICENSE file.
 
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
-import 'package:cloud_firestore_web/src/utils/exception.dart';
+import 'package:firebase/firebase.dart' as firebase;
+import 'package:firebase/firestore.dart' show Firestore, Settings;
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_core_web/firebase_core_web_interop.dart'
-    as core_interop;
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 
-import 'src/collection_reference_web.dart';
-import 'src/field_value_factory_web.dart';
-import 'src/document_reference_web.dart';
-import 'src/query_web.dart';
-import 'src/transaction_web.dart';
-import 'src/write_batch_web.dart';
+import 'package:cloud_firestore_web/src/collection_reference_web.dart';
+import 'package:cloud_firestore_web/src/field_value_factory_web.dart';
+import 'package:cloud_firestore_web/src/document_reference_web.dart';
+import 'package:cloud_firestore_web/src/query_web.dart';
+import 'package:cloud_firestore_web/src/transaction_web.dart';
+import 'package:cloud_firestore_web/src/write_batch_web.dart';
 
-import 'src/interop/firestore.dart' as firestore_interop;
-
-/// Web implementation for [FirebaseFirestorePlatform]
+/// Web implementation for [FirestorePlatform]
 /// delegates calls to firestore web plugin
-class FirebaseFirestoreWeb extends FirebaseFirestorePlatform {
+class FirestoreWeb extends FirestorePlatform {
   /// instance of Firestore from the web plugin
-  final firestore_interop.Firestore _webFirestore;
+  final Firestore _webFirestore;
 
   /// Called by PluginRegistry to register this plugin for Flutter Web
   static void registerWith(Registrar registrar) {
-    FirebaseFirestorePlatform.instance = FirebaseFirestoreWeb();
+    FirestorePlatform.instance = FirestoreWeb();
   }
 
-  /// Builds an instance of [FirebaseFirestoreWeb] with an optional [FirebaseApp] instance
+  /// Builds an instance of [CloudFirestoreWeb] with an optional [FirebaseApp] instance
   /// If [app] is null then the created instance will use the default [FirebaseApp]
-  FirebaseFirestoreWeb({FirebaseApp? app})
-      : _webFirestore =
-            firestore_interop.getFirestoreInstance(core_interop.app(app?.name)),
-        super(appInstance: app) {
+  FirestoreWeb({FirebaseApp app})
+      : _webFirestore = firebase
+            .firestore(firebase.app((app ?? FirebaseApp.instance).name)),
+        super(app: app ?? FirebaseApp.instance) {
     FieldValueFactoryPlatform.instance = FieldValueFactoryWeb();
   }
 
   @override
-  FirebaseFirestorePlatform delegateFor(
-      {/*required*/ required FirebaseApp app}) {
-    return FirebaseFirestoreWeb(app: app);
+  FirestorePlatform withApp(FirebaseApp app) => FirestoreWeb(app: app);
+
+  @override
+  CollectionReferencePlatform collection(String path) {
+    return CollectionReferenceWeb(this, _webFirestore, path.split('/'));
   }
 
   @override
-  CollectionReferencePlatform collection(String collectionPath) {
-    return CollectionReferenceWeb(this, _webFirestore, collectionPath);
+  QueryPlatform collectionGroup(String path) {
+    return QueryWeb(this, path, _webFirestore.collectionGroup(path),
+        isCollectionGroup: true);
   }
 
   @override
-  WriteBatchPlatform batch() => WriteBatchWeb(_webFirestore);
+  DocumentReferencePlatform document(String path) =>
+      DocumentReferenceWeb(_webFirestore, this, path.split('/'));
 
   @override
-  Future<void> clearPersistence() async {
-    try {
-      await _webFirestore.clearPersistence();
-    } catch (e) {
-      throw getFirebaseException(e);
+  WriteBatchPlatform batch() => WriteBatchWeb(_webFirestore.batch());
+
+  @override
+  Future<void> enablePersistence(bool enable) async {
+    if (enable) {
+      await _webFirestore.enablePersistence();
     }
   }
 
   @override
-  QueryPlatform collectionGroup(String collectionPath) {
-    return QueryWeb(
-        this, collectionPath, _webFirestore.collectionGroup(collectionPath),
-        isCollectionGroupQuery: true);
-  }
-
-  @override
-  Future<void> disableNetwork() async {
-    try {
-      await _webFirestore.disableNetwork();
-    } catch (e) {
-      throw getFirebaseException(e);
-    }
-  }
-
-  @override
-  DocumentReferencePlatform doc(String documentPath) =>
-      DocumentReferenceWeb(this, _webFirestore, documentPath);
-
-  @override
-  Future<void> enableNetwork() async {
-    try {
-      await _webFirestore.enableNetwork();
-    } catch (e) {
-      throw getFirebaseException(e);
-    }
-  }
-
-  @override
-  Stream<void> snapshotsInSync() {
-    return _webFirestore.snapshotsInSync();
-  }
-
-  @override
-  Future<T?> runTransaction<T>(TransactionHandler<T> transactionHandler,
-      {Duration timeout = const Duration(seconds: 30)}) async {
-    try {
-      await _webFirestore.runTransaction((transaction) async {
-        return transactionHandler(
-            TransactionWeb(this, _webFirestore, transaction!));
-      }).timeout(timeout);
-      // Workaround for 'Runtime type information not available for type_variable_local'
-      // See: https://github.com/dart-lang/sdk/issues/29722
-      return null;
-    } catch (e) {
-      throw getFirebaseException(e);
-    }
-  }
-
-  @override
-  set settings(Settings settings) {
-    int? cacheSizeBytes;
-
-    if (settings.cacheSizeBytes == null) {
-      cacheSizeBytes = 40000000;
-    } else if (settings.cacheSizeBytes == Settings.CACHE_SIZE_UNLIMITED) {
-      // https://github.com/firebase/firebase-js-sdk/blob/e67affba53a53d28492587b2f60521a00166db60/packages/firestore/src/local/lru_garbage_collector.ts#L175
-      cacheSizeBytes = -1;
-    } else {
-      cacheSizeBytes = settings.cacheSizeBytes;
-    }
-
-    if (settings.host != null && settings.sslEnabled != null) {
-      _webFirestore.settings(firestore_interop.Settings(
-          cacheSizeBytes: cacheSizeBytes,
-          host: settings.host,
-          ssl: settings.sslEnabled));
+  Future<void> settings(
+      {bool persistenceEnabled,
+      String host,
+      bool sslEnabled,
+      int cacheSizeBytes}) async {
+    if (host != null && sslEnabled != null) {
+      _webFirestore.settings(Settings(
+          cacheSizeBytes: cacheSizeBytes ?? 40000000,
+          host: host,
+          ssl: sslEnabled));
     } else {
       _webFirestore
-          .settings(firestore_interop.Settings(cacheSizeBytes: cacheSizeBytes));
+          .settings(Settings(cacheSizeBytes: cacheSizeBytes ?? 40000000));
     }
-  }
-
-  /// Enable persistence of Firestore data.
-  @override
-  Future<void> enablePersistence([PersistenceSettings? settings]) async {
-    try {
-      await _webFirestore.enablePersistence(
-          firestore_interop.PersistenceSettings(
-              synchronizeTabs: settings?.synchronizeTabs ?? false));
-    } catch (e) {
-      throw getFirebaseException(e);
+    if (persistenceEnabled) {
+      await _webFirestore.enablePersistence();
     }
   }
 
   @override
-  Future<void> terminate() async {
-    try {
-      await _webFirestore.terminate();
-    } catch (e) {
-      throw getFirebaseException(e);
-    }
-  }
-
-  @override
-  Future<void> waitForPendingWrites() async {
-    try {
-      await _webFirestore.waitForPendingWrites();
-    } catch (e) {
-      throw getFirebaseException(e);
-    }
+  Future<Map<String, dynamic>> runTransaction(
+      TransactionHandler transactionHandler,
+      {Duration timeout = const Duration(seconds: 5)}) async {
+    Map<String, dynamic> result;
+    await _webFirestore.runTransaction((transaction) async {
+      result = await transactionHandler(TransactionWeb(transaction, this));
+    }).timeout(timeout);
+    return result is Map<String, dynamic> ? result : <String, dynamic>{};
   }
 }

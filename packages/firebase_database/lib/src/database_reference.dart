@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 part of firebase_database;
 
 /// DatabaseReference represents a particular location in your Firebase
@@ -195,14 +193,6 @@ class ServerValue {
   static const Map<String, String> timestamp = <String, String>{
     '.sv': 'timestamp'
   };
-
-  /// Returns a placeholder value that can be used to atomically increment the
-  /// current database value by the provided delta.
-  static Map<dynamic, dynamic> increment(int delta) {
-    return <dynamic, dynamic>{
-      '.sv': {'increment': delta}
-    };
-  }
 }
 
 typedef Future<MutableData> TransactionHandler(MutableData mutableData);

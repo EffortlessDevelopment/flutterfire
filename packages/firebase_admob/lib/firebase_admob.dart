@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 // ignore_for_file: deprecated_member_use_from_same_package
 
 // These are temporary ignores to allow us to land a new set of linter rules in
@@ -491,8 +489,7 @@ class RewardedVideoAd {
 
   /// Loads a rewarded video ad using the provided ad unit ID.
   Future<bool> load(
-      {@required String adUnitId,
-      MobileAdTargetingInfo targetingInfo = const MobileAdTargetingInfo()}) {
+      {@required String adUnitId, MobileAdTargetingInfo targetingInfo}) {
     assert(adUnitId.isNotEmpty);
     return _invokeBooleanMethod("loadRewardedVideoAd", <String, dynamic>{
       'adUnitId': adUnitId,

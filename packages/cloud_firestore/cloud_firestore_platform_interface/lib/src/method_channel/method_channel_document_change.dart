@@ -1,26 +1,28 @@
 // Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
-
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
 
-/// An implementation of [DocumentChangePlatform] that uses [MethodChannel] to
-/// communicate with Firebase plugins.
+import 'utils/maps.dart';
+
+/// A DocumentChange represents a change to the documents matching a query.
+///
+/// It contains the document affected and the type of change that occurred
+/// (added, modified, or removed).
 class MethodChannelDocumentChange extends DocumentChangePlatform {
-  /// Creates a [MethodChannelDocumentChange] from the given [data]
+  /// Create instance of [MethodChannelDocumentChange] using [data]
   MethodChannelDocumentChange(
-      FirebaseFirestorePlatform firestore, Map<String, dynamic> data)
+      Map<dynamic, dynamic> data, FirestorePlatform firestore)
       : super(DocumentChangeType.values.firstWhere((DocumentChangeType type) {
           return type.toString() == data['type'];
         }),
             data['oldIndex'],
             data['newIndex'],
             DocumentSnapshotPlatform(
-              firestore,
               data['path'],
-              <String, dynamic>{
-                'data': Map<String, dynamic>.from(data['data']),
-                'metadata': Map<String, dynamic>.from(data['metadata']),
-              },
+              asStringKeyedMap(data['document']),
+              SnapshotMetadataPlatform(data['metadata']['hasPendingWrites'],
+                  data['metadata']['isFromCache']),
+              firestore,
             ));
 }

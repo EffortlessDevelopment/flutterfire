@@ -7,10 +7,8 @@ import 'dart:async';
 import 'package:cloud_firestore_platform_interface/cloud_firestore_platform_interface.dart';
 
 import 'method_channel_firestore.dart';
-import 'utils/exception.dart';
 
-/// An implementation of [WriteBatchPlatform] that uses [MethodChannel] to
-/// communicate with Firebase plugins.
+/// A [MethodChannelWriteBatch] is a series of write operations to be performed as one unit.
 ///
 /// Operations done on a [MethodChannelWriteBatch] do not take effect until you [commit].
 ///
@@ -18,78 +16,90 @@ import 'utils/exception.dart';
 /// nor can it be committed again.
 class MethodChannelWriteBatch extends WriteBatchPlatform {
   /// Create an instance of [MethodChannelWriteBatch]
-  MethodChannelWriteBatch(this._firestore) : super();
+  MethodChannelWriteBatch(this._firestore)
+      : _handle = MethodChannelFirestore.channel.invokeMethod<dynamic>(
+            'WriteBatch#create', <String, dynamic>{'app': _firestore.app.name}),
+        super();
 
-  /// The [FirebaseFirestorePlatform] instance of this batch.
-  final FirebaseFirestorePlatform _firestore;
-
-  /// Keeps track of all batch writes in order.
-  List<Map<String, dynamic>> _writes = [];
-
-  /// The committed state of this batch.
-  ///
-  /// Once a batch has been committed, a [StateError] will
-  /// be thrown if the batch is modified after.
+  final FirestorePlatform _firestore;
+  Future<dynamic> _handle;
+  final List<Future<dynamic>> _actions = <Future<dynamic>>[];
   bool _committed = false;
 
   @override
   Future<void> commit() async {
     _assertNotCommitted();
+
     _committed = true;
-
-    if (_writes.isEmpty) {
-      return;
-    }
-
-    try {
-      await MethodChannelFirebaseFirestore.channel
-          .invokeMethod<void>('WriteBatch#commit', <String, dynamic>{
-        'firestore': _firestore,
-        'writes': _writes,
-      });
-    } catch (e) {
-      throw convertPlatformException(e);
-    }
+    await Future.wait<dynamic>(_actions);
+    await MethodChannelFirestore.channel.invokeMethod<void>(
+        'WriteBatch#commit', <String, dynamic>{'handle': await _handle});
   }
 
   @override
-  void delete(String documentPath) {
+  void delete(DocumentReferencePlatform document) {
     _assertNotCommitted();
-    _writes.add(<String, dynamic>{
-      'path': documentPath,
-      'type': 'DELETE',
+
+    _handle.then((dynamic handle) {
+      _actions.add(
+        MethodChannelFirestore.channel.invokeMethod<void>(
+          'WriteBatch#delete',
+          <String, dynamic>{
+            'app': _firestore.app.name,
+            'handle': handle,
+            'path': document.path,
+          },
+        ),
+      );
     });
   }
 
   @override
-  void set(String documentPath, Map<String, dynamic> data,
-      [SetOptions? options]) {
+  void setData(
+    DocumentReferencePlatform document,
+    Map<String, dynamic> data, {
+    bool merge = false,
+  }) {
     _assertNotCommitted();
-    _writes.add(<String, dynamic>{
-      'path': documentPath,
-      'type': 'SET',
-      'data': data,
-      'options': <String, dynamic>{
-        'merge': options?.merge,
-        'mergeFields': options?.mergeFields,
-      },
+
+    _handle.then((dynamic handle) {
+      _actions.add(
+        MethodChannelFirestore.channel.invokeMethod<void>(
+          'WriteBatch#setData',
+          <String, dynamic>{
+            'app': _firestore.app.name,
+            'handle': handle,
+            'path': document.path,
+            'data': data,
+            'options': <String, bool>{'merge': merge},
+          },
+        ),
+      );
     });
   }
 
   @override
-  void update(
-    String documentPath,
+  void updateData(
+    DocumentReferencePlatform document,
     Map<String, dynamic> data,
   ) {
     _assertNotCommitted();
-    _writes.add(<String, dynamic>{
-      'path': documentPath,
-      'type': 'UPDATE',
-      'data': data,
+
+    _handle.then((dynamic handle) {
+      _actions.add(
+        MethodChannelFirestore.channel.invokeMethod<void>(
+          'WriteBatch#updateData',
+          <String, dynamic>{
+            'app': _firestore.app.name,
+            'handle': handle,
+            'path': document.path,
+            'data': data
+          },
+        ),
+      );
     });
   }
 
-  /// Ensures that once a batch has been committed, it can not be modified again.
   void _assertNotCommitted() {
     if (_committed) {
       throw StateError(

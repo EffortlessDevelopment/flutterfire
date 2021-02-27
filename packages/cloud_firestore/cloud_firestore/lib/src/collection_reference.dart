@@ -1,52 +1,34 @@
-// Copyright 2020, the Chromium project authors.  Please see the AUTHORS file
+// Copyright 2017, the Chromium project authors.  Please see the AUTHORS file
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
 part of cloud_firestore;
 
-/// A [CollectionReference] object can be used for adding documents, getting
-/// [DocumentReference]s, and querying for documents (using the methods
+/// A CollectionReference object can be used for adding documents, getting
+/// document references, and querying for documents (using the methods
 /// inherited from [Query]).
-@immutable
 class CollectionReference extends Query {
-  @override
-  // ignore: overridden_fields
-  final CollectionReferencePlatform _delegate;
+  final platform.CollectionReferencePlatform _delegate;
 
-  CollectionReference._(FirebaseFirestore firestore, this._delegate)
-      : super._(firestore, _delegate);
+  CollectionReference._(this._delegate, Firestore firestore)
+      : super._(_delegate, firestore);
 
-  /// Returns the ID of the referenced collection.
-  String get id => _delegate.id;
+  /// ID of the referenced collection.
+  String get id => _pathComponents.isEmpty ? null : _pathComponents.last;
 
-  /// Returns the parent [DocumentReference] of this collection or `null`.
+  /// For subcollections, parent returns the containing [DocumentReference].
   ///
-  /// If this collection is a root collection, `null` is returned.
-  DocumentReference? get parent {
-    DocumentReferencePlatform? _documentReferencePlatform = _delegate.parent;
-
-    // Only subcollections have a parent
-    if (_documentReferencePlatform == null) {
+  /// For root collections, null is returned.
+  DocumentReference parent() {
+    if (_pathComponents.length < 2) {
       return null;
     }
-
-    return DocumentReference._(firestore, _documentReferencePlatform);
+    return DocumentReference._(_delegate.parent(), firestore);
   }
 
   /// A string containing the slash-separated path to this  CollectionReference
   /// (relative to the root of the database).
-  String get path => _delegate.path;
-
-  /// Returns a `DocumentReference` with an auto-generated ID, after
-  /// populating it with provided [data].
-  ///
-  /// The unique key generated is prefixed with a client-generated timestamp
-  /// so that the resulting list will be chronologically-sorted.
-  Future<DocumentReference> add(Map<String, dynamic> data) async {
-    final DocumentReference newDocument = doc();
-    await newDocument.set(data);
-    return newDocument;
-  }
+  String get path => _path;
 
   /// Returns a `DocumentReference` with the provided path.
   ///
@@ -54,25 +36,17 @@ class CollectionReference extends Query {
   ///
   /// The unique key generated is prefixed with a client-generated timestamp
   /// so that the resulting list will be chronologically-sorted.
-  DocumentReference doc([String? path]) {
-    if (path != null) {
-      assert(path.isNotEmpty, 'a document path must be a non-empty string');
-      assert(!path.contains('//'), 'a document path must not contain "//"');
-      assert(path != '/', 'a document path must point to a valid document');
-    }
+  DocumentReference document([String path]) =>
+      DocumentReference._(_delegate.document(path), firestore);
 
-    return DocumentReference._(firestore, _delegate.doc(path));
+  /// Returns a `DocumentReference` with an auto-generated ID, after
+  /// populating it with provided [data].
+  ///
+  /// The unique key generated is prefixed with a client-generated timestamp
+  /// so that the resulting list will be chronologically-sorted.
+  Future<DocumentReference> add(Map<String, dynamic> data) async {
+    final DocumentReference newDocument = document();
+    await newDocument.setData(data);
+    return newDocument;
   }
-
-  @override
-  bool operator ==(dynamic other) =>
-      other is CollectionReference &&
-      other.firestore == firestore &&
-      other.path == path;
-
-  @override
-  int get hashCode => hashValues(firestore, path);
-
-  @override
-  String toString() => '$CollectionReference($path)';
 }

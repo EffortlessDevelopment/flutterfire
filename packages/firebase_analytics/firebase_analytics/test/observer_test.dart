@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:flutter/services.dart';
@@ -97,9 +95,7 @@ void main() {
       when(analytics.setCurrentScreen(screenName: anyNamed('screenName')))
           .thenThrow(ArgumentError());
 
-      // TODO: Reenable the line below when the issue is fixed.
-      // https://github.com/FirebaseExtended/flutterfire/issues/2850
-      // expect(() => observer.didPush(route, previousRoute), throwsArgumentError);
+      expect(() => observer.didPush(route, previousRoute), throwsArgumentError);
 
       // Print PlatformExceptions
       Future<void> throwPlatformException() async =>

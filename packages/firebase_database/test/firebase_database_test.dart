@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:firebase_core/firebase_core.dart';
@@ -11,37 +9,24 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'test_common.dart';
-
 void main() {
-  initializeMethodChannel();
-  FirebaseApp app;
-
-  setUpAll(() async {
-    app = await Firebase.initializeApp(
-      name: 'testApp',
-      options: const FirebaseOptions(
-        appId: '1:1234567890:ios:42424242424242',
-        apiKey: '123',
-        projectId: '123',
-        messagingSenderId: '1234567890',
-      ),
-    );
-  });
+  TestWidgetsFlutterBinding.ensureInitialized();
 
   group('$FirebaseDatabase', () {
     const MethodChannel channel = MethodChannel(
       'plugins.flutter.io/firebase_database',
     );
+
     int mockHandleId = 0;
     final List<MethodCall> log = <MethodCall>[];
-
+    final FirebaseApp app = FirebaseApp(
+      name: 'testApp',
+    );
     final String databaseURL = 'https://fake-database-url2.firebaseio.com';
-    FirebaseDatabase database;
+    final FirebaseDatabase database =
+        FirebaseDatabase(app: app, databaseURL: databaseURL);
 
     setUp(() async {
-      database = FirebaseDatabase(app: app, databaseURL: databaseURL);
-
       channel.setMockMethodCallHandler((MethodCall methodCall) async {
         log.add(methodCall);
         switch (methodCall.method) {
@@ -55,25 +40,29 @@ void main() {
             Map<String, dynamic> updatedValue;
             Future<void> simulateEvent(
                 int transactionKey, final MutableData mutableData) async {
-              ServicesBinding.instance.defaultBinaryMessenger
-                  .handlePlatformMessage(
-                      channel.name,
-                      channel.codec.encodeMethodCall(
-                        MethodCall(
-                          'DoTransaction',
-                          <String, dynamic>{
-                            'transactionKey': transactionKey,
-                            'snapshot': <String, dynamic>{
-                              'key': mutableData.key,
-                              'value': mutableData.value,
-                            },
-                          },
-                        ),
-                      ), (_) {
-                updatedValue = channel.codec
-                    .decodeEnvelope(_)['value']
-                    .cast<String, dynamic>();
-              });
+              // TODO(hterkelsen): Remove this when defaultBinaryMessages is in stable.
+              // https://github.com/flutter/flutter/issues/33446
+              // ignore: deprecated_member_use
+              await BinaryMessages.handlePlatformMessage(
+                channel.name,
+                channel.codec.encodeMethodCall(
+                  MethodCall(
+                    'DoTransaction',
+                    <String, dynamic>{
+                      'transactionKey': transactionKey,
+                      'snapshot': <String, dynamic>{
+                        'key': mutableData.key,
+                        'value': mutableData.value,
+                      },
+                    },
+                  ),
+                ),
+                (_) {
+                  updatedValue = channel.codec
+                      .decodeEnvelope(_)['value']
+                      .cast<String, dynamic>();
+                },
+              );
             }
 
             await simulateEvent(
@@ -192,13 +181,9 @@ void main() {
     group('$DatabaseReference', () {
       test('set', () async {
         final dynamic value = <String, dynamic>{'hello': 'world'};
-        final dynamic serverValue = <String, dynamic>{
-          'qux': ServerValue.increment(8)
-        };
         final int priority = 42;
         await database.reference().child('foo').set(value);
         await database.reference().child('bar').set(value, priority: priority);
-        await database.reference().child('baz').set(serverValue);
         expect(
           log,
           <Matcher>[
@@ -220,20 +205,6 @@ void main() {
                 'path': 'bar',
                 'value': value,
                 'priority': priority,
-              },
-            ),
-            isMethodCall(
-              'DatabaseReference#set',
-              arguments: <String, dynamic>{
-                'app': app.name,
-                'databaseURL': databaseURL,
-                'path': 'baz',
-                'value': {
-                  'qux': {
-                    '.sv': {'increment': 8}
-                  }
-                },
-                'priority': null,
               },
             ),
           ],
@@ -282,9 +253,11 @@ void main() {
             .reference()
             .child('foo')
             .runTransaction((MutableData mutableData) {
-          mutableData.value['fakeKey'] =
-              'updated ' + mutableData.value['fakeKey'];
-          return Future.value(mutableData);
+          return Future<MutableData>(() {
+            mutableData.value['fakeKey'] =
+                'updated ' + mutableData.value['fakeKey'];
+            return mutableData;
+          });
         });
         expect(
           log,
@@ -424,6 +397,7 @@ void main() {
     });
 
     group('$Query', () {
+      // TODO(jackson): Write more tests for queries
       test('keepSynced, simple query', () async {
         final String path = 'foo';
         final Query query = database.reference().child(path);
@@ -486,19 +460,23 @@ void main() {
         const String errorDetails = 'Some details';
         final Query query = database.reference().child('some path');
         Future<void> simulateError(String errorMessage) async {
-          ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
-              channel.name,
-              channel.codec.encodeMethodCall(
-                MethodCall('Error', <String, dynamic>{
-                  'handle': 99,
-                  'error': <String, dynamic>{
-                    'code': errorCode,
-                    'message': errorMessage,
-                    'details': errorDetails,
-                  },
-                }),
-              ),
-              (_) {});
+          // TODO(hterkelsen): Remove this when defaultBinaryMessages is in stable.
+          // https://github.com/flutter/flutter/issues/33446
+          // ignore: deprecated_member_use
+          await BinaryMessages.handlePlatformMessage(
+            channel.name,
+            channel.codec.encodeMethodCall(
+              MethodCall('Error', <String, dynamic>{
+                'handle': 99,
+                'error': <String, dynamic>{
+                  'code': errorCode,
+                  'message': errorMessage,
+                  'details': errorDetails,
+                },
+              }),
+            ),
+            (_) {},
+          );
         }
 
         final AsyncQueue<DatabaseError> errors = AsyncQueue<DatabaseError>();
@@ -526,18 +504,22 @@ void main() {
         final String path = 'foo';
         final Query query = database.reference().child(path);
         Future<void> simulateEvent(String value) async {
-          ServicesBinding.instance.defaultBinaryMessenger.handlePlatformMessage(
-              channel.name,
-              channel.codec.encodeMethodCall(
-                MethodCall('Event', <String, dynamic>{
-                  'handle': 87,
-                  'snapshot': <String, dynamic>{
-                    'key': path,
-                    'value': value,
-                  },
-                }),
-              ),
-              (_) {});
+          // TODO(hterkelsen): Remove this when defaultBinaryMessages is in stable.
+          // https://github.com/flutter/flutter/issues/33446
+          // ignore: deprecated_member_use
+          await BinaryMessages.handlePlatformMessage(
+            channel.name,
+            channel.codec.encodeMethodCall(
+              MethodCall('Event', <String, dynamic>{
+                'handle': 87,
+                'snapshot': <String, dynamic>{
+                  'key': path,
+                  'value': value,
+                },
+              }),
+            ),
+            (_) {},
+          );
         }
 
         final AsyncQueue<Event> events = AsyncQueue<Event>();

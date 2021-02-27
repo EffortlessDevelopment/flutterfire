@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
@@ -33,8 +31,6 @@ class _PictureScannerState extends State<PictureScanner> {
   final TextRecognizer _recognizer = FirebaseVision.instance.textRecognizer();
   final TextRecognizer _cloudRecognizer =
       FirebaseVision.instance.cloudTextRecognizer();
-  final DocumentTextRecognizer _cloudDocumentRecognizer =
-      FirebaseVision.instance.cloudDocumentTextRecognizer();
 
   Future<void> _getAndScanImage() async {
     setState(() {
@@ -42,9 +38,8 @@ class _PictureScannerState extends State<PictureScanner> {
       _imageSize = null;
     });
 
-    final File pickedImage =
+    final File imageFile =
         await ImagePicker.pickImage(source: ImageSource.gallery);
-    final File imageFile = File(pickedImage.path);
 
     if (imageFile != null) {
       _getImageSize(imageFile);
@@ -103,9 +98,6 @@ class _PictureScannerState extends State<PictureScanner> {
       case Detector.cloudText:
         results = await _cloudRecognizer.processImage(visionImage);
         break;
-      case Detector.cloudDocumentText:
-        results = await _cloudDocumentRecognizer.processImage(visionImage);
-        break;
       default:
         return;
     }
@@ -136,9 +128,6 @@ class _PictureScannerState extends State<PictureScanner> {
         break;
       case Detector.cloudText:
         painter = TextDetectorPainter(_imageSize, results);
-        break;
-      case Detector.cloudDocumentText:
-        painter = DocumentTextDetectorPainter(_imageSize, results);
         break;
       default:
         break;
@@ -207,10 +196,6 @@ class _PictureScannerState extends State<PictureScanner> {
               const PopupMenuItem<Detector>(
                 child: Text('Detect Cloud Text'),
                 value: Detector.cloudText,
-              ),
-              const PopupMenuItem<Detector>(
-                child: Text('Detect Document Text'),
-                value: Detector.cloudDocumentText,
               ),
             ],
           ),

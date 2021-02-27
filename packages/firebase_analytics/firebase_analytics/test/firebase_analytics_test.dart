@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -126,7 +124,7 @@ void main() {
           arguments: 234,
         ),
       );
-    }, testOn: 'android');
+    });
 
     test('resetAnalyticsData', () async {
       await analytics.resetAnalyticsData();

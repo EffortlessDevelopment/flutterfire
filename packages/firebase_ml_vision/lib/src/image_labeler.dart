@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// @dart=2.9
-
 part of firebase_ml_vision;
 
 /// Used for finding [ImageLabel]s in a supplied image.
@@ -129,8 +127,7 @@ class CloudImageLabelerOptions {
 /// Represents an entity label detected by [ImageLabeler] and [CloudImageLabeler].
 class ImageLabel {
   ImageLabel._(dynamic data)
-      : confidence =
-            data['confidence'] == null ? null : data['confidence'].toDouble(),
+      : confidence = data['confidence'],
         entityId = data['entityId'],
         text = data['text'];
 

@@ -1,4 +1,4 @@
-// Copyright 2020 The Chromium Authors. All rights reserved.
+// Copyright 2019 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,109 +12,96 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('$FirebaseApp', () {
-    final mock = MockFirebaseCore();
-
-    const FirebaseOptions testOptions = FirebaseOptions(
-      apiKey: 'apiKey',
-      appId: 'appId',
-      messagingSenderId: 'messagingSenderId',
-      projectId: 'projectId',
+    final FirebaseApp testApp = FirebaseApp(
+      name: 'testApp',
     );
-
-    String testAppName = 'testApp';
+    const FirebaseOptions testOptions = FirebaseOptions(
+      apiKey: 'testAPIKey',
+      bundleID: 'testBundleID',
+      clientID: 'testClientID',
+      trackingID: 'testTrackingID',
+      gcmSenderID: 'testGCMSenderID',
+      projectID: 'testProjectID',
+      androidClientID: 'testAndroidClientID',
+      googleAppID: 'testGoogleAppID',
+      databaseURL: 'testDatabaseURL',
+      deepLinkURLScheme: 'testDeepLinkURLScheme',
+      storageBucket: 'testStorageBucket',
+    );
+    MockFirebaseCore mock;
 
     setUp(() async {
-      clearInteractions(mock);
-      Firebase.delegatePackingProperty = mock;
+      mock = MockFirebaseCore();
+      FirebaseCorePlatform.instance = mock;
 
-      final FirebaseAppPlatform platformApp =
-          FirebaseAppPlatform(testAppName, testOptions);
+      final PlatformFirebaseApp app = PlatformFirebaseApp(
+        'testApp',
+        const FirebaseOptions(
+          apiKey: 'testAPIKey',
+          bundleID: 'testBundleID',
+          clientID: 'testClientID',
+          trackingID: 'testTrackingID',
+          gcmSenderID: 'testGCMSenderID',
+          projectID: 'testProjectID',
+          androidClientID: 'testAndroidClientID',
+          googleAppID: 'testGoogleAppID',
+          databaseURL: 'testDatabaseURL',
+          deepLinkURLScheme: 'testDeepLinkURLScheme',
+          storageBucket: 'testStorageBucket',
+        ),
+      );
 
-      when(mock.apps).thenReturn([platformApp]);
-      when(mock.app(testAppName)).thenReturn(platformApp);
-      when(mock.initializeApp(name: testAppName, options: testOptions))
-          .thenAnswer((_) {
-        return Future.value(platformApp);
+      when(mock.appNamed('testApp')).thenAnswer((_) {
+        return Future<PlatformFirebaseApp>.value(app);
       });
+
+      when(mock.allApps()).thenAnswer((_) =>
+          Future<List<PlatformFirebaseApp>>.value(<PlatformFirebaseApp>[app]));
     });
 
-    test('.apps', () {
-      List<FirebaseApp> apps = Firebase.apps;
-      verify(mock.apps);
-      expect(apps[0], Firebase.app(testAppName));
-    });
-
-    test('.app()', () {
-      FirebaseApp app = Firebase.app(testAppName);
-      verify(mock.app(testAppName));
-
-      expect(app.name, testAppName);
-      expect(app.options, testOptions);
-    });
-
-    test('.initializeApp()', () async {
-      FirebaseApp initializedApp =
-          await Firebase.initializeApp(name: testAppName, options: testOptions);
-      FirebaseApp app = Firebase.app(testAppName);
-
-      expect(initializedApp, app);
+    test('configure', () async {
+      final FirebaseApp reconfiguredApp = await FirebaseApp.configure(
+        name: 'testApp',
+        options: testOptions,
+      );
+      expect(reconfiguredApp, equals(testApp));
+      final FirebaseApp newApp = await FirebaseApp.configure(
+        name: 'newApp',
+        options: testOptions,
+      );
+      expect(newApp.name, equals('newApp'));
+      // It's ugly to specify mockito verification types
+      // ignore: always_specify_types
       verifyInOrder([
-        mock.initializeApp(name: testAppName, options: testOptions),
-        mock.app(testAppName),
+        mock.appNamed('testApp'),
+        mock.appNamed('newApp'),
+        mock.configure('newApp', testOptions),
       ]);
+    });
+
+    test('appNamed', () async {
+      final FirebaseApp existingApp = await FirebaseApp.appNamed('testApp');
+      expect(existingApp.name, equals('testApp'));
+      expect((await existingApp.options), equals(testOptions));
+      final FirebaseApp missingApp = await FirebaseApp.appNamed('missingApp');
+      expect(missingApp, isNull);
+      // It's ugly to specify mockito verification types
+      // ignore: always_specify_types
+      verifyInOrder([
+        mock.appNamed('testApp'),
+        mock.appNamed('testApp'),
+        mock.appNamed('missingApp'),
+      ]);
+    });
+
+    test('allApps', () async {
+      final List<FirebaseApp> allApps = await FirebaseApp.allApps();
+      expect(allApps, equals(<FirebaseApp>[testApp]));
+      verify(mock.allApps());
     });
   });
 }
 
 class MockFirebaseCore extends Mock
-    with
-        // ignore: prefer_mixin, plugin_platform_interface needs to migrate to use `mixin`
-        MockPlatformInterfaceMixin
-    implements
-        FirebasePlatform {
-  @override
-  FirebaseAppPlatform app([String name = defaultFirebaseAppName]) {
-    return super.noSuchMethod(
-      Invocation.method(#app, [name]),
-      returnValue: FakeFirebaseAppPlatform(),
-      returnValueForMissingStub: FakeFirebaseAppPlatform(),
-    );
-  }
-
-  @override
-  Future<FirebaseAppPlatform> initializeApp({
-    String? name,
-    FirebaseOptions? options,
-  }) {
-    return super.noSuchMethod(
-      Invocation.method(
-        #initializeApp,
-        const [],
-        {
-          #name: name,
-          #options: options,
-        },
-      ),
-      returnValue: Future.value(FakeFirebaseAppPlatform()),
-      returnValueForMissingStub: Future.value(FakeFirebaseAppPlatform()),
-    );
-  }
-
-  @override
-  List<FirebaseAppPlatform> get apps {
-    return super.noSuchMethod(
-      Invocation.getter(#apps),
-      returnValue: <FirebaseAppPlatform>[],
-      returnValueForMissingStub: <FirebaseAppPlatform>[],
-    );
-  }
-}
-
-// ignore: avoid_implementing_value_types
-class FakeFirebaseAppPlatform extends Fake implements FirebaseAppPlatform {
-  @override
-  // ignore: hash_and_equals, overriden only because the compile complains otherwise
-  bool operator ==(Object? other) {
-    return super == other;
-  }
-}
+    with MockPlatformInterfaceMixin
+    implements FirebaseCorePlatform {}

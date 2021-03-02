@@ -139,7 +139,7 @@
         result([NSNumber numberWithBool:YES]);
       }
     } else if ([@"configure" isEqualToString:method]) {
-      [FIRMessaging messaging].shouldEstablishDirectChannel = true;
+//      [FIRMessaging messaging].shouldEstablishDirectChannel = true;
       [[UIApplication sharedApplication] registerForRemoteNotifications];
       if (_launchNotification != nil && _launchNotification[kGCMMessageIDKey]) {
         [_channel invokeMethod:@"onLaunch" arguments:_launchNotification];
@@ -287,27 +287,32 @@
     [_channel invokeMethod:@"onToken" arguments:[FIRMessaging messaging].FCMToken];
   }
 
-  // This will only be called for iOS < 10. For iOS >= 10, we make this call when we request
-  // permissions.
-  - (void)application:(UIApplication *)application
-      didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings {
-    NSDictionary *settingsDictionary = @{
-      @"sound" : [NSNumber numberWithBool:notificationSettings.types & UIUserNotificationTypeSound],
-      @"badge" : [NSNumber numberWithBool:notificationSettings.types & UIUserNotificationTypeBadge],
-      @"alert" : [NSNumber numberWithBool:notificationSettings.types & UIUserNotificationTypeAlert],
-      @"provisional" : [NSNumber numberWithBool:NO],
-    };
-    [_channel invokeMethod:@"onIosSettingsRegistered" arguments:settingsDictionary];
-  }
+// ORIGINAL COMMENT:
+// This will only be called for iOS < 10. For iOS >= 10, we make this call when we request
+// permissions.
 
-  - (void)messaging:(nonnull FIRMessaging *)messaging
-      didReceiveRegistrationToken:(nonnull NSString *)fcmToken {
-    [_channel invokeMethod:@"onToken" arguments:fcmToken];
-  }
+// NEW COMMENT:
+// Removing to fix build errors as according to above theeses methods are unused past iOS 10, our target being 12+.
 
-  - (void)messaging:(FIRMessaging *)messaging
-      didReceiveMessage:(FIRMessagingRemoteMessage *)remoteMessage {
-    [_channel invokeMethod:@"onMessage" arguments:remoteMessage.appData];
-  }
+//  - (void)application:(UIApplication *)application
+//      didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings {
+//    NSDictionary *settingsDictionary = @{
+//      @"sound" : [NSNumber numberWithBool:notificationSettings.types & UIUserNotificationTypeSound],
+//      @"badge" : [NSNumber numberWithBool:notificationSettings.types & UIUserNotificationTypeBadge],
+//      @"alert" : [NSNumber numberWithBool:notificationSettings.types & UIUserNotificationTypeAlert],
+//      @"provisional" : [NSNumber numberWithBool:NO],
+//    };
+//    [_channel invokeMethod:@"onIosSettingsRegistered" arguments:settingsDictionary];
+//  }
+//
+//  - (void)messaging:(nonnull FIRMessaging *)messaging
+//      didReceiveRegistrationToken:(nonnull NSString *)fcmToken {
+//    [_channel invokeMethod:@"onToken" arguments:fcmToken];
+//  }
+//
+//  - (void)messaging:(FIRMessaging *)messaging
+//      didReceiveMessage:(FIRMessagingRemoteMessage *)remoteMessage {
+//    [_channel invokeMethod:@"onMessage" arguments:remoteMessage.appData];
+//  }
 
   @end
